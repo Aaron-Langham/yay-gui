@@ -1,11 +1,24 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QTextEdit, QLabel, QLineEdit, QListWidget, QInputDialog
-
 import subprocess
+import sys
+
+from PyQt5.QtWidgets import (
+    QApplication,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QMainWindow,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
 
 class YayGUI(QMainWindow):
-    def __init__(self):
+    def __init__(self, aur_helper):
         super().__init__()
+        self.aur_helper = aur_helper
         self.initUI()
 
     def initUI(self):
@@ -45,7 +58,11 @@ class YayGUI(QMainWindow):
         search_term = self.search_input.text()
         self.package_list.clear()
         try:
-            output = subprocess.check_output(f"yay -Ss {search_term}", shell=True, universal_newlines=True)
+            output = subprocess.check_output(
+                f"{self.aur_helper} -Ss {search_term}",
+                shell=True,
+                universal_newlines=True,
+            )
             packages = output.split("\n")[5:-2]  # Skip header and footer lines
             self.package_list.addItems(packages)
         except subprocess.CalledProcessError as e:
@@ -56,23 +73,36 @@ class YayGUI(QMainWindow):
         if selected_packages:
             package_names = " ".join(selected_packages)
             package_names = package_names.split(" ")[0]
-            #print(package_names)
-            self.run_yay_command(f"yay -S {package_names}", "Installation completed.")
+            # print(package_names)
+            self.run_yay_command(
+                f"{self.aur_helper} -S {package_names}", "Installation completed."
+            )
 
     def remove_package(self):
-        package_name, ok = QInputDialog.getText(self, "Remove Package", "Enter package name:")
+        package_name, ok = QInputDialog.getText(
+            self, "Remove Package", "Enter package name:"
+        )
         if ok:
-            self.run_yay_command(f"yay -R {package_name}", "Removal completed.")
+            self.run_yay_command(
+                f"{self.aur_helper} -R {package_name}", "Removal completed."
+            )
 
     def run_yay_command(self, command, success_message):
         try:
-            output = subprocess.check_output(command, shell=True, universal_newlines=True)
+            output = subprocess.check_output(
+                command, shell=True, universal_newlines=True
+            )
             self.output_text.setPlainText(output + "\n" + success_message)
         except subprocess.CalledProcessError as e:
             self.output_text.setPlainText(f"Error: {e.output}")
 
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    yay_gui = YayGUI()
+
+    # get AUR helper from arguement
+    aur_helper = sys.argv[1] if len(sys.argv) > 1 else "yay"
+
+    yay_gui = YayGUI(aur_helper)
     yay_gui.show()
     sys.exit(app.exec_())
